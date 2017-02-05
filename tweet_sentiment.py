@@ -3,6 +3,65 @@ import re
 import os
 from functools import reduce
 
+states = {
+        'AK': 'Alaska',
+        'AL': 'Alabama',
+        'AR': 'Arkansas',
+        'AS': 'American Samoa',
+        'AZ': 'Arizona',
+        'CA': 'California',
+        'CO': 'Colorado',
+        'CT': 'Connecticut',
+        'DC': 'District of Columbia',
+        'DE': 'Delaware',
+        'FL': 'Florida',
+        'GA': 'Georgia',
+        'GU': 'Guam',
+        'HI': 'Hawaii',
+        'IA': 'Iowa',
+        'ID': 'Idaho',
+        'IL': 'Illinois',
+        'IN': 'Indiana',
+        'KS': 'Kansas',
+        'KY': 'Kentucky',
+        'LA': 'Louisiana',
+        'MA': 'Massachusetts',
+        'MD': 'Maryland',
+        'ME': 'Maine',
+        'MI': 'Michigan',
+        'MN': 'Minnesota',
+        'MO': 'Missouri',
+        'MP': 'Northern Mariana Islands',
+        'MS': 'Mississippi',
+        'MT': 'Montana',
+        'NA': 'National',
+        'NC': 'North Carolina',
+        'ND': 'North Dakota',
+        'NE': 'Nebraska',
+        'NH': 'New Hampshire',
+        'NJ': 'New Jersey',
+        'NM': 'New Mexico',
+        'NV': 'Nevada',
+        'NY': 'New York',
+        'OH': 'Ohio',
+        'OK': 'Oklahoma',
+        'OR': 'Oregon',
+        'PA': 'Pennsylvania',
+        'PR': 'Puerto Rico',
+        'RI': 'Rhode Island',
+        'SC': 'South Carolina',
+        'SD': 'South Dakota',
+        'TN': 'Tennessee',
+        'TX': 'Texas',
+        'UT': 'Utah',
+        'VA': 'Virginia',
+        'VI': 'Virgin Islands',
+        'VT': 'Vermont',
+        'WA': 'Washington',
+        'WI': 'Wisconsin',
+        'WV': 'West Virginia',
+        'WY': 'Wyoming'
+}
 
 class Sentiment:
     def __init__(self, score, frequency = 0):
@@ -22,7 +81,7 @@ class Tweet:
         state_reg = re.compile("^.+, (\w+)\\s*")
         hash_reg = re.compile("\B#\w\w+")
         self.text = text
-        self.state = state_reg.findall(state) if not(state is None) else None
+        self.state = state_reg.findall(state) if not(state is None) else ["_"]
         self.hashtags = hash_reg.findall(text)
         self.score = 0
 
@@ -110,7 +169,7 @@ def main():
     scores = generate_sentiment_scores(afinnfile)
 
     # Filter non-tweet data
-    tweets = list(get_tweets(get_raw_tweets("output.json")))
+    tweets = list(filter(lambda t: t.state != [] and not(states.get(t.state[0],None) is None), get_tweets(get_raw_tweets("output.json"))))
 
     scores_and_unknowns = map(fan_out(score_tweet_text(scores), unknown_words(scores)), tweet_text(tweets))
 

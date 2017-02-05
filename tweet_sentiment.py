@@ -17,6 +17,19 @@ class Sentiment:
         return str(self.score) + ' ' + str(self.frequency)
 
 
+class Tweet:
+    def __init__(self, text, state):
+        state_reg = re.compile("^.+, (\w+)\\s*")
+        hash_reg = re.compile("\B#\w\w+")
+        self.text = text
+        self.state = state_reg.findall(state) if not(state is None) else None
+        self.hashtags = hash_reg.findall(text)
+        self.score = 0
+
+    def __str__(self):
+        return str(self.text) + ", " + str(self.score) + ", " + str(self.hashtags) + ", " + str(self.state)
+
+
 def generate_sentiment_scores(sentiment_file):
     scores = {}                         # initialize an empty dictionary
     for line in sentiment_file:
@@ -35,18 +48,22 @@ def score_word(sentiment_scores): return lambda word: sentiment_scores.get(word.
 def score_words(sentiment_scores, tweet): return map(score_word(sentiment_scores), tweet.split())
 
 
-#   score_tweet :: Map String Sentiment -> String -> Int
-def score_tweet(sentiment_scores):
-    return lambda tweet: reduce(lambda x, y: x + y.get_score(),  # Checks the frequency of the words as well
-                                score_words(sentiment_scores, tweet), 0)
+#   score_tweet :: Map String Sentiment -> Tweet -> Int
+def score_tweet_text(sentiment_scores):
+    return lambda text: reduce(lambda x, y: x + y.get_score(),  # Checks the frequency of the words as well
+                               score_words(sentiment_scores, text), 0)
 
 
-def get_tweets(file):
+def get_raw_tweets(file):
     json_tweets = filter(lambda line: line != u"\n", open(file, encoding="utf16"))
     return filter(valid_tweet, map(lambda line: loads(line), json_tweets))
 
 
-def tweet_text(tweets): return map(lambda tweet: tweet['text'], tweets)
+def get_tweets(raw_tweets):
+    return map(lambda tweet: Tweet(tweet['text'], tweet['user']['location']), raw_tweets)
+
+
+def tweet_text(tweets): return map(lambda tweet: tweet.text, tweets)
 
 
 #   fan_out :: ((a -> b),(a -> c)) -> a -> (a, c)
@@ -93,15 +110,18 @@ def main():
     scores = generate_sentiment_scores(afinnfile)
 
     # Filter non-tweet data
-    tweets = get_tweets("output.json")
+    tweets = list(get_tweets(get_raw_tweets("output.json")))
 
-    scores_and_unknowns = map(fan_out(score_tweet(scores), unknown_words(scores)), tweet_text(tweets))
+    scores_and_unknowns = map(fan_out(score_tweet_text(scores), unknown_words(scores)), tweet_text(tweets))
 
     scores_and_new_words = map(score_unknown_words, scores_and_unknowns)
 
     tweet_scores, new_words = reduce(join_tweet_results, scores_and_new_words, ([], {}))
 
-    for k in scores:
-        print(k + ' ' + str(scores[k]))
+    for i in range(0, len(tweets)):
+        tweets[i].score = tweet_scores[i]
+
+    for tweet in tweets:
+        print(str(tweet))
 
 main()
